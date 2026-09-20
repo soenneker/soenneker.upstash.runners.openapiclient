@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/.github/">
+    <File Path=".github/renovate.json" />
+  </Folder>
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/build-and-test.yml" />
+    <File Path=".github/workflows/codeql.yml" />
+    <File Path=".github/workflows/daily-automatic-update.yml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Soenneker.Upstash.Runners.OpenApiClient/Soenneker.Upstash.Runners.OpenApiClient.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Soenneker.Upstash.Runners.OpenApiClient.Tests/Soenneker.Upstash.Runners.OpenApiClient.Tests.csproj" />
+  </Folder>
+</Solution>
