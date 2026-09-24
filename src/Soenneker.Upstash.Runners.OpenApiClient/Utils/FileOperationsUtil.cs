@@ -1,3 +1,4 @@
+using Soenneker.Utils.File.Abstract;
 using System;
 using System.IO;
 using System.Threading;
@@ -24,7 +25,7 @@ public sealed class FileOperationsUtil(
     IFileDownloadUtil fileDownloadUtil,
     IKiotaUtil kiotaUtil,
     IOpenApiFixer openApiFixer,
-    IYamlUtil yamlUtil) : IFileOperationsUtil
+    IYamlUtil yamlUtil, IFileUtil fileUtil) : IFileOperationsUtil
 {
     public async ValueTask Process(CancellationToken cancellationToken = default)
     {
@@ -38,7 +39,7 @@ public sealed class FileOperationsUtil(
             : Path.GetFullPath(localDirectory);
         string srcDirectory = Path.Combine(gitDirectory, "src", Constants.Library);
         string projectPath = Path.Combine(srcDirectory, $"{Constants.Library}.csproj");
-        if (!File.Exists(projectPath))
+        if (!await fileUtil.Exists(projectPath, cancellationToken))
             throw new InvalidOperationException($"Target must contain {projectPath}.");
 
         // Generate and compile separately so a failed download, generation, or build preserves the existing client.
@@ -53,7 +54,7 @@ public sealed class FileOperationsUtil(
             if (documentPath is null)
                 throw new InvalidOperationException("Upstash OpenAPI document download failed.");
 
-            string document = await File.ReadAllTextAsync(documentPath, cancellationToken);
+            string document = await fileUtil.Read(documentPath, cancellationToken: cancellationToken);
             if (!document.TrimStart().StartsWith('{'))
             {
                 string convertedPath = Path.Combine(stagingDirectory, "openapi.converted.json");
@@ -67,10 +68,11 @@ public sealed class FileOperationsUtil(
             await kiotaUtil.Generate(fixedPath, "UpstashOpenApiClient", Constants.Library, stagingDirectory, cancellationToken);
 
             string generatedDirectory = Path.Combine(stagingDirectory, "src", Constants.Library);
-            if (!File.Exists(Path.Combine(generatedDirectory, "UpstashOpenApiClient.cs")))
+            if (!await fileUtil.Exists(Path.Combine(generatedDirectory, "UpstashOpenApiClient.cs"), cancellationToken))
                 throw new InvalidOperationException("Kiota did not generate UpstashOpenApiClient.cs.");
 
             string stagedProjectPath = Path.Combine(generatedDirectory, $"{Constants.Library}.csproj");
+            // FileUtil.Copy overwrites; staging must fail if this project already exists.
             File.Copy(projectPath, stagedProjectPath);
             await dotnetUtil.Restore(stagedProjectPath, cancellationToken: cancellationToken);
             if (!await dotnetUtil.Build(stagedProjectPath, true, "Release", false, cancellationToken: cancellationToken))
@@ -82,7 +84,7 @@ public sealed class FileOperationsUtil(
             {
                 if (IsBuildOutput(srcDirectory, file))
                     continue;
-                File.Delete(file);
+                await fileUtil.Delete(file, cancellationToken: cancellationToken);
             }
 
             foreach (string file in Directory.EnumerateFiles(generatedDirectory, "*", SearchOption.AllDirectories))
@@ -92,9 +94,9 @@ public sealed class FileOperationsUtil(
                     continue;
                 string destination = Path.Combine(srcDirectory, Path.GetRelativePath(generatedDirectory, file));
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                File.Copy(file, destination, true);
+                await fileUtil.Copy(file, destination, cancellationToken: cancellationToken);
             }
-            File.Copy(fixedPath, Path.Combine(gitDirectory, "openapi.fixed.json"), true);
+            await fileUtil.Copy(fixedPath, Path.Combine(gitDirectory, "openapi.fixed.json"), cancellationToken: cancellationToken);
 
             if (push)
             {
