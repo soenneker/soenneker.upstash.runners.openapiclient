@@ -9,7 +9,7 @@ namespace Soenneker.Upstash.Runners.OpenApiClient.Tests;
 public sealed class UpstashOpenApiClientRunnerTests(Host host) : HostedUnitTest(host)
 {
     [Test]
-    public async Task Process_rejects_a_target_without_the_client_project()
+    public async ValueTask Process_rejects_a_target_without_the_client_project()
     {
         InvalidOperationException? failure = null;
         try
