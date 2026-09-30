@@ -100,7 +100,7 @@ public sealed class FileOperationsUtil(
 
             if (push)
             {
-                await services.GetRequiredService<IGitUtil>().CommitAndPush(gitDirectory, "Regenerate Upstash Developer API client",
+                await services.GetRequiredService<IGitUtil>().CommitAndPush(gitDirectory, await services.GetRequiredService<IGitUtil>().GetUpdateCommitMessage(gitDirectory, "Regenerate Upstash Developer API client", cancellationToken),
                     EnvironmentUtil.GetVariableStrict("GH__TOKEN"), EnvironmentUtil.GetVariableStrict("GIT__NAME"),
                     EnvironmentUtil.GetVariableStrict("GIT__EMAIL"), cancellationToken);
             }
